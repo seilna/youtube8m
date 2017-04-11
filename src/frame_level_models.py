@@ -46,6 +46,8 @@ flags.DEFINE_string("video_level_classifier_model", "MoeModel",
                     "classifier layer")
 flags.DEFINE_integer("lstm_cells", 1024, "Number of LSTM cells.")
 flags.DEFINE_integer("lstm_layers", 2, "Number of LSTM layers.")
+flags.DEFINE_integer("topk", 5, "Ordinal TopK numbers.")
+flags.DEFINE_integer("feature_dim", 1024, "rgb:1024, audio:128, rgb+audio:1156")
 
 class FrameLevelLogisticModel(models.BaseModel):
 
@@ -234,3 +236,51 @@ class LstmModel(models.BaseModel):
         model_input=state,
         vocab_size=vocab_size,
         **unused_params)
+
+class ordinalTopK(models.BaseModel):
+  def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    """Creates a model which uses a ordinal TopK to represent the video.
+    Args:
+    model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
+                  input features.
+    vocab_size: The number of classes in the dataset.
+    num_frames: A vector of length 'batch' which indicates the number of
+      frames for each video (before padding).
+
+    Returns:
+      A dictionary with a tensor containing the probability predictions of the
+      model in the 'predictions' key. The dimensions of the tensor are
+      'batch_size' x 'num_classes'.
+    """
+
+    num_features = FLAGS.feature_dim
+    k = FLAGS.topk
+    mean, var = tf.nn.moments(x=model_input, axes=[1], keep_dims=True) # [batch_size, 1, num_featuers]
+    model_input_trans = tf.transpose(a=model_input, perm=[0,2,1]) # [batch_size, num_features, max_frames]
+    topk, indices = tf.nn.top_k(input=model_input_trans, k=k, sorted=True) # topk: [batch_size, num_features, k]
+    topk_trans = tf.transpose(a=topk, perm=[0,2,1]) # [batch_size, k, num_features]
+    
+    concat = tf.concat([mean, var, topk_trans], 1) # [batch_size, k+2, num_features]
+    concat_flat = tf.reshape(concat, shape=[-1, (k+2)*num_features]) # [batch_size, (k+2) * num_featuers]
+    concat_flat.set_shape([None, (k+2)*num_features])
+    
+    aggregated_model = getattr(video_level_models, FLAGS.video_level_classifier_model)
+
+    return aggregated_model().create_model(
+      model_input=concat_flat,
+      vocab_size=vocab_size,
+      **unused_params)
+
+
+
+
+
+
+
+
+
+      
+
+
+
+

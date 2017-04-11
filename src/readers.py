@@ -18,6 +18,15 @@ import tensorflow as tf
 import utils
 
 from tensorflow import logging
+from tensorflow import flags
+from cbp.compact_bilinear_pooling import compact_bilinear_pooling_layer as cbp_layer
+
+FLAGS = flags.FLAGS
+flags.DEFINE_bool(
+  "cbp", False, "cbp features usage")
+flags.DEFINE_integer(
+  "cbp_size", 2048, "cbp dimension")
+
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
 
@@ -121,10 +130,25 @@ class YT8MAggregatedFeatureReader(BaseReader):
           [self.feature_sizes[feature_index]], tf.float32)
 
     features = tf.parse_example(serialized_examples, features=feature_map)
+    tf.add_to_collection("features", features)
+    tf.add_to_collection("mean_rgb", features["mean_rgb"])
+    tf.add_to_collection("mean_audio", features["mean_audio"])
+
     labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
     labels.set_shape([None, self.num_classes])
-    concatenated_features = tf.concat([
-        features[feature_name] for feature_name in self.feature_names], 1)
+
+    if FLAGS.cbp == False:
+      concatenated_features = tf.concat([
+          features[feature_name] for feature_name in self.feature_names], 1)
+    elif FLAGS.cbp == True:
+      cbp_size = FLAGS.cbp_size
+      concatenated_features = cbp_layer(
+        tf.reshape(features["mean_rgb"], shape=[-1, 1, 1, 1024]),
+        tf.reshape(features["mean_audio"], shape=[-1, 1, 1, 128]),
+        output_dim=cbp_size)
+      concatenated_features.set_shape([None, cbp_size])
+
+    tf.add_to_collection("concat_features", concatenated_features)
 
     return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 

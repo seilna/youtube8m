@@ -30,6 +30,7 @@ from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
 from tensorflow.python.client import device_lib
+from IPython import embed
 import utils
 
 FLAGS = flags.FLAGS
@@ -395,6 +396,7 @@ class Trainer(object):
         train_op = tf.get_collection("train_op")[0]
         init_op = tf.global_variables_initializer()
 
+		
     sv = tf.train.Supervisor(
         graph,
         logdir=self.train_dir,
@@ -405,9 +407,13 @@ class Trainer(object):
         save_summaries_secs=120,
         saver=saver)
 
+
     logging.info("%s: Starting managed session.", task_as_string(self.task))
     with sv.managed_session(target, config=self.config) as sess:
       try:
+				# Check the variables and their shapes
+        model_vars = tf.contrib.framework.get_model_variables()
+        slim.model_analyzer.analyze_vars(model_vars, print_info=True)
         logging.info("%s: Entering training loop.", task_as_string(self.task))
         while (not sv.should_stop()) and (not self.max_steps_reached):
           batch_start_time = time.time()
@@ -538,6 +544,7 @@ class Trainer(object):
   def build_model(self, model, reader):
     """Find the model and build the graph."""
 
+		# Each default, CrossEntropy Loss/ AdamOptimizer
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
 
@@ -571,6 +578,7 @@ def get_reader():
         feature_names=feature_names, feature_sizes=feature_sizes)
 
   return reader
+
 
 
 class ParameterServer(object):

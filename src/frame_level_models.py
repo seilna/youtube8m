@@ -262,6 +262,7 @@ class ordinalTopK(models.BaseModel):
     
     concat = tf.concat([mean, var, topk_trans], 1) # [batch_size, k+2, num_features]
     concat_flat = tf.reshape(concat, shape=[-1, (k+2)*num_features]) # [batch_size, (k+2) * num_featuers]
+    concat_flat = tf.nn.l2_normalize(concat_flat, dim=1)
     concat_flat.set_shape([None, (k+2)*num_features])
     
     aggregated_model = getattr(video_level_models, FLAGS.video_level_classifier_model)

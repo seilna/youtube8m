@@ -278,10 +278,23 @@ class YT8MFrameFeatureReader(BaseReader):
       feature_matrices[feature_index] = feature_matrix
 
     # cap the number of frames at self.max_frames
-    num_frames = tf.minimum(num_frames, self.max_frames)
+    #num_frames = tf.minimum(num_frames, self.max_frames)
 
     # concatenate different features
-    video_matrix = tf.concat(feature_matrices, 1)
+    tf.add_to_collection("feature_matrix", feature_matrices)
+
+    cbp_size = FLAGS.cbp_size
+    if FLAGS.cbp == False:
+      video_matrix = tf.concat(feature_matrices, 1)
+    elif FLAGS.cbp == True:
+      video_matrix = cbp_layer(
+        tf.reshape(feature_matrices[0], shape=[1, 1, 300, 1024]),
+        tf.reshape(feature_matrices[1], shape=[1, 1, 300, 128]),
+        output_dim=FLAGS.cbp_size)
+      video_matrix.set_shape([300, cbp_size])
+
+    num_frames = tf.minimum(num_frames, self.max_frames)
+        
 
     # convert to batch format.
     # TODO: Do proper batch reads to remove the IO bottleneck.

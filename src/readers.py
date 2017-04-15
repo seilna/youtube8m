@@ -147,6 +147,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
         tf.reshape(features["mean_audio"], shape=[-1, 1, 1, 128]),
         output_dim=cbp_size)
       concatenated_features.set_shape([None, cbp_size])
+      concatenated_features = tf.nn.l2_normalize(concatenated_features, dim=1)
 
     tf.add_to_collection("concat_features", concatenated_features)
 

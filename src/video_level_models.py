@@ -81,6 +81,14 @@ class MoeModel(models.BaseModel):
     """
     num_mixtures = num_mixtures or FLAGS.moe_num_mixtures
 
+    gate_activations = slim.fully_connected(
+        model_input,
+        vocab_size * (num_mixtures + 1),
+        activation_fn=None,
+        biases_initializer=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="gates")
+
     expert_activations = slim.fully_connected(
         model_input,
         vocab_size * num_mixtures,
@@ -89,7 +97,7 @@ class MoeModel(models.BaseModel):
         scope="experts")
 
     gating_distribution = tf.nn.softmax(tf.reshape(
-        model_input,
+        gate_activations,
         [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
     expert_distribution = tf.nn.sigmoid(tf.reshape(
         expert_activations,

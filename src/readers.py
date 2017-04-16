@@ -26,6 +26,8 @@ flags.DEFINE_bool(
   "cbp", False, "cbp features usage")
 flags.DEFINE_integer(
   "cbp_size", 2048, "cbp dimension")
+flags.DEFINE_float(
+  "random_noise", 0.0, "Gaussian Random noise weight")
 
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
@@ -147,6 +149,9 @@ class YT8MAggregatedFeatureReader(BaseReader):
         tf.reshape(features["mean_audio"], shape=[-1, 1, 1, 128]),
         output_dim=cbp_size)
       concatenated_features.set_shape([None, cbp_size])
+
+      # 10% of Gaussian random noise added.
+      concatenated_features = concatenated_features + FLAGS.random_noise * tf.random_normal(shape=tf.shape(concatenated_features))
       concatenated_features = tf.nn.l2_normalize(concatenated_features, dim=1)
 
     tf.add_to_collection("concat_features", concatenated_features)

@@ -15,7 +15,10 @@
 """Provides definitions for non-regularized training or test losses."""
 
 import tensorflow as tf
+from tensorflow import flags
 
+FLAGS = flags.FLAGS
+flags.DEFINE_float("delta", 0.5, "delta value for Huber Loss")
 
 class BaseLoss(object):
   """Inherit from this class when implementing new losses."""
@@ -64,6 +67,23 @@ class L2_CrossEntropyLoss(BaseLoss):
       cross_entropy_loss = cross_entropy_loss * cross_entropy_loss
       return tf.reduce_mean(tf.reduce_sum(cross_entropy_loss, 1))
 
+class Huber_CrossEntropyLoss(BaseLoss):
+  """Calculate the cross entropy loss between the predictions and labels.
+  """
+
+  def calculate_loss(self, predictions, labels, **unused_params):
+    with tf.name_scope("loss_xent"):
+      delta = FLAGS.delta
+      epsilon = 10e-6
+      float_labels = tf.cast(labels, tf.float32)
+      cross_entropy_loss = float_labels * tf.log(predictions + epsilon) + (
+          1 - float_labels) * tf.log(1 - predictions + epsilon)
+      cross_entropy_loss = tf.negative(cross_entropy_loss)
+
+      # Huber Loss Approximation
+      cross_entropy_loss = delta * delta * (tf.sqrt(1 + (cross_entropy_loss/delta)*(cross_entropy_loss/delta)) - 1)
+      return tf.reduce_mean(tf.reduce_sum(cross_entropy_loss, 1))
+
 class HingeLoss(BaseLoss):
   """Calculate the hinge loss between the predictions and labels.
 
@@ -100,6 +120,33 @@ class L2_HingeLoss(BaseLoss):
           all_zeros, tf.scalar_mul(b, all_ones) - sign_labels * predictions)
       hinge_loss = hinge_loss * hinge_loss
       return tf.reduce_mean(tf.reduce_sum(hinge_loss, 1))
+
+
+class Huber_HingeLoss(BaseLoss):
+  """Calculate the hinge loss between the predictions and labels.
+
+  Note the subgradient is used in the backpropagation, and thus the optimization
+  may converge slower. The predictions trained by the hinge loss are between -1
+  and +1.
+  """
+
+  def calculate_loss(self, predictions, labels, b=1.0, **unused_params):
+    with tf.name_scope("loss_hinge"):
+      delta = FLAGS.delta
+      float_labels = tf.cast(labels, tf.float32)
+      all_zeros = tf.zeros(tf.shape(float_labels), dtype=tf.float32)
+      all_ones = tf.ones(tf.shape(float_labels), dtype=tf.float32)
+      sign_labels = tf.subtract(tf.scalar_mul(2, float_labels), all_ones)
+      hinge_loss = tf.maximum(
+          all_zeros, tf.scalar_mul(b, all_ones) - sign_labels * predictions)
+      
+      # Huber Loss Approximation
+      hinge_loss_entropy_loss = delta * delta * (tf.sqrt(1 + (hinge_loss/delta)*(hinge_loss/delta)) - 1)
+
+      return tf.reduce_mean(tf.reduce_sum(hinge_loss, 1))
+
+
+
 
 class SoftmaxLoss(BaseLoss):
   """Calculate the softmax loss between the predictions and labels.

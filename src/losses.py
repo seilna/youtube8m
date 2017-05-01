@@ -64,9 +64,6 @@ class L2_CrossEntropyLoss(BaseLoss):
       cross_entropy_loss = cross_entropy_loss * cross_entropy_loss
       return tf.reduce_mean(tf.reduce_sum(cross_entropy_loss, 1))
 
-
-
-
 class HingeLoss(BaseLoss):
   """Calculate the hinge loss between the predictions and labels.
 
@@ -85,6 +82,24 @@ class HingeLoss(BaseLoss):
           all_zeros, tf.scalar_mul(b, all_ones) - sign_labels * predictions)
       return tf.reduce_mean(tf.reduce_sum(hinge_loss, 1))
 
+class L2_HingeLoss(BaseLoss):
+  """Calculate the hinge loss between the predictions and labels.
+
+  Note the subgradient is used in the backpropagation, and thus the optimization
+  may converge slower. The predictions trained by the hinge loss are between -1
+  and +1.
+  """
+
+  def calculate_loss(self, predictions, labels, b=1.0, **unused_params):
+    with tf.name_scope("loss_hinge"):
+      float_labels = tf.cast(labels, tf.float32)
+      all_zeros = tf.zeros(tf.shape(float_labels), dtype=tf.float32)
+      all_ones = tf.ones(tf.shape(float_labels), dtype=tf.float32)
+      sign_labels = tf.subtract(tf.scalar_mul(2, float_labels), all_ones)
+      hinge_loss = tf.maximum(
+          all_zeros, tf.scalar_mul(b, all_ones) - sign_labels * predictions)
+      hinge_loss = hinge_loss * hinge_loss
+      return tf.reduce_mean(tf.reduce_sum(hinge_loss, 1))
 
 class SoftmaxLoss(BaseLoss):
   """Calculate the softmax loss between the predictions and labels.

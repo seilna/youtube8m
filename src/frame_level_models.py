@@ -306,8 +306,8 @@ class PositionEncodingModel(models.BaseModel):
     l = [ [ (1-j/J) - (k/d) * (1-2*j/J) for k in range(d) ] for j in range(J)]
 
     # Adding Gaussian Noise
-    state = state + FLAGS.gaussian_noise * tf.random_normal(shape=[J, d])
-    state = tf.reduce_sum(model_input * l, axis=1)
+    state = model_input + FLAGS.gaussian_noise * tf.random_normal(shape=[J, d])
+    state = tf.reduce_sum(state * l, axis=1)
     state = tf.nn.l2_normalize(state, dim=1, epsilon=1e-6)
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)

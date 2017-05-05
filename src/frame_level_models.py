@@ -50,6 +50,8 @@ flags.DEFINE_integer("topk", 5, "Ordinal TopK numbers.")
 flags.DEFINE_integer("feature_dim", 1152, "rgb:1024, audio:128, rgb+audio:1156")
 
 flags.DEFINE_integer("temporal_encoding", False, "whether use temporal encoding scheme or not.")
+flags.DEFINE_bool("gaussian_noise", 0.0, "added noise to each memory")
+
 
 class FrameLevelLogisticModel(models.BaseModel):
 
@@ -303,9 +305,14 @@ class PositionEncodingModel(models.BaseModel):
     # PE matrix
     l = [ [ (1-j/J) - (k/d) * (1-2*j/J) for k in range(d) ] for j in range(J)]
 
+    # Adding Gaussian Noise
+    state = state + FLAGS.gaussian_noise * tf.random_normal(shape=[J, d])
     state = tf.reduce_sum(model_input * l, axis=1)
+    state = tf.nn.l2_normalize(state, dim=1, epsilon=1e-6)
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
+
+    
 
     return aggregated_model().create_model(
         model_input=state,

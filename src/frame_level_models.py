@@ -47,7 +47,9 @@ flags.DEFINE_string("video_level_classifier_model", "MoeModel",
 flags.DEFINE_integer("lstm_cells", 1024, "Number of LSTM cells.")
 flags.DEFINE_integer("lstm_layers", 2, "Number of LSTM layers.")
 flags.DEFINE_integer("topk", 5, "Ordinal TopK numbers.")
-flags.DEFINE_integer("feature_dim", 1024, "rgb:1024, audio:128, rgb+audio:1156")
+flags.DEFINE_integer("feature_dim", 1152, "rgb:1024, audio:128, rgb+audio:1156")
+
+flags.DEFINE_integer("temporal_encoding", False, "whether use temporal encoding scheme or not.")
 
 class FrameLevelLogisticModel(models.BaseModel):
 
@@ -270,6 +272,38 @@ class LstmModel(models.BaseModel):
                                        sequence_length=num_frames,
                                        dtype=tf.float32)
 
+    aggregated_model = getattr(video_level_models,
+                               FLAGS.video_level_classifier_model)
+
+    return aggregated_model().create_model(
+        model_input=state,
+        vocab_size=vocab_size,
+        **unused_params)
+
+class PositionEncodingModel(models.BaseModel):
+  def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    """Creates a model which uses a stack of LSTMs to represent the video.
+
+    Args:
+      model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
+                   input features.
+      vocab_size: The number of classes in the dataset.
+      num_frames: A vector of length 'batch' which indicates the number of
+           frames for each video (before padding).
+
+    Returns:
+      A dictionary with a tensor containing the probability predictions of the
+      model in the 'predictions' key. The dimensions of the tensor are
+      'batch_size' x 'num_classes'.
+    """
+
+    J = 300
+    d = FLAGS.feature_dim
+
+    # PE matrix
+    l = [ [ (1-j/J) - (k/d) * (1-2*j/J) for k in range(d) ] for j in range(J)]
+
+    state = tf.reduce_sum(model_input * l, axis=1)
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
 

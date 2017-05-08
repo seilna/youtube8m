@@ -66,6 +66,7 @@ if __name__ == "__main__":
                        "How many threads to use for reading input files.")
   flags.DEFINE_boolean("run_once", False, "Whether to run eval only once.")
   flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
+	flags.DEFINE_string("checkpoint_file", None, "specific checkpoint file")
 
 
 def find_class_by_name(name, modules):
@@ -190,7 +191,10 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
   global_step_val = -1
   with tf.Session() as sess:
-    latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+		if FLAGS.checkpoint_file == None:
+	    latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+		else: latest_checkpoint = FLAGS.checkpoint_file
+
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: " + latest_checkpoint)
       # Restores from checkpoint

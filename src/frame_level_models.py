@@ -406,16 +406,3 @@ class ordinalTopK(models.BaseModel):
       vocab_size=vocab_size,
       **unused_params)
 
-
-
-
-
-
-
-
-
-      
-
-
-
-

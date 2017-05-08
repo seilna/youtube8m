@@ -50,6 +50,9 @@ flags.DEFINE_integer("topk", 5, "Ordinal TopK numbers.")
 flags.DEFINE_integer("feature_dim", 1152, "rgb:1024, audio:128, rgb+audio:1156")
 
 flags.DEFINE_integer("temporal_encoding", False, "whether use temporal encoding scheme or not.")
+flags.DEFINE_integer("kernel_height", 5, "CNN kernel height")
+flags.DEFINE_integer("kernel_width", 1152, "CNN kernel width")
+flags.DEFINE_integer("num_channels", 64, "number of Text-CNN channels")
 flags.DEFINE_bool("gaussian_noise", 0.0, "added noise to each memory")
 
 
@@ -405,4 +408,42 @@ class ordinalTopK(models.BaseModel):
       model_input=concat_flat,
       vocab_size=vocab_size,
       **unused_params)
+
+class CNN(models.BaseModel):
+  def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    max_frames = 300
+    model_input = tf.expand_dims(model_input, -1) # [batch_size, max_frames, num_features, 1]
+    num_channels = FLAGS.num_channels
+
+    kernel_height = FLAGS.kernel_height
+    kernel_width = FLAGS.kernel_width
+
+    # [batch_size, max_frames - k, 1, num_channels]
+    cnn_activation = tf.contrib.layers.conv2d(
+                        inputs=model_input,
+                        num_outputs=num_channels,
+                        kernel_size=[kernel_height, kernel_width],
+                        stride=1,
+                        padding="VALID",
+                        activation_fn=tf.nn.relu,
+                        trainable=True
+                        )
+
+    # [batch_size, 1, 1, num_channels]
+    max_pool_over_time = tf.contrib.layers.max_pool2d(
+                            inputs=cnn_activation,
+                            kernel_size=[max_frames - kernel_height + 1, 1],
+                            stride=1,
+                            padding="VALID")
+
+    state = tf.reshape(max_pool_over_time, shape=[-1, num_channels])
+
+    aggregated_model = getattr(video_level_models, FLAGS.video_level_classifier_model)
+    return aggregated_model().create_model(
+      model_input=state,
+      vocab_size=vocab_size,
+      **unused_params)
+
+
+
 

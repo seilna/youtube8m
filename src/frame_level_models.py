@@ -437,6 +437,7 @@ class CNN(models.BaseModel):
                             padding="VALID")
 
     state = tf.reshape(max_pool_over_time, shape=[-1, num_channels])
+    state = tf.nn.l2_normalize(state, dim=1)
 
     aggregated_model = getattr(video_level_models, FLAGS.video_level_classifier_model)
     return aggregated_model().create_model(

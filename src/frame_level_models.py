@@ -429,6 +429,8 @@ class CNN(models.BaseModel):
                         trainable=True
                         )
 
+    cnn_activation = tf.nn.l2_normalize(cnn_activation, dim=3)
+
     # [batch_size, 1, 1, num_channels]
     max_pool_over_time = tf.contrib.layers.max_pool2d(
                             inputs=cnn_activation,
@@ -467,7 +469,6 @@ class Lstm_average_concat(models.BaseModel):
 
     #state = tf.nn.l2_normalize(state, dim=1)
     average_state = tf.nn.l2_normalize(tf.reduce_sum(model_input, axis=1), dim=1)
-
     state = tf.concat([state, average_state], 1)
 
     aggregated_model = getattr(video_level_models,

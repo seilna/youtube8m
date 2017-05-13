@@ -447,8 +447,6 @@ class CNN(models.BaseModel):
       vocab_size=vocab_size,
       **unused_params)
 
-
-
 class Lstm_average_concat(models.BaseModel):
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
     lstm_size = FLAGS.lstm_cells
@@ -479,5 +477,21 @@ class Lstm_average_concat(models.BaseModel):
         vocab_size=vocab_size,
         **unused_params)
    
+class SoftClusteringModel(models.BaseModel):
+  def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    att_matrix = tf.matmul(model_input, tf.transpose(model_input, [0,2,1])) # [batch_size, max_frames, max_frames]
 
+    att_matrix = tf.expand_dims(att_matrix, -1)
+    att = tf.reduce_sum(att_matrix, axis=2) # [batch_size, max_frames]
+    att = tf.nn.softmax(att)
 
+    state = tf.reduce_sum(model_input * att, axis=1) # [batch_size, num_features]
+    state = tf.nn.l2_normalize(state, dim=1)
+    
+    aggregated_model = getattr(video_level_models,
+                               FLAGS.video_level_classifier_model)
+
+    return aggregated_model().create_model(
+      model_input=state,
+      vocab_size=vocab_size,
+      **unused_params)

@@ -54,7 +54,7 @@ flags.DEFINE_integer("kernel_height", 5, "CNN kernel height")
 flags.DEFINE_integer("kernel_width", 1152, "CNN kernel width")
 flags.DEFINE_integer("num_channels", 64, "number of Text-CNN channels")
 flags.DEFINE_bool("gaussian_noise", 0.0, "added noise to each memory")
-flags.DEFINE_float("alpha", 1.0, "SoftClustering Sharpening parameter."
+flags.DEFINE_float("alpha", 1.0, "SoftClustering Sharpening parameter.")
 
 class FrameLevelLogisticModel(models.BaseModel):
 

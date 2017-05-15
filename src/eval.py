@@ -65,10 +65,8 @@ if __name__ == "__main__":
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
   flags.DEFINE_boolean("run_once", False, "Whether to run eval only once.")
-  flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
-	flags.DEFINE_string("checkpoint_file", None, "specific checkpoint file")
-
-
+  flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")  
+  flags.DEFINE_string("checkpoint_file", None, "specific checkpoint file")
 def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
   modules = [getattr(module, name, None) for module in modules]
@@ -191,9 +189,10 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
   global_step_val = -1
   with tf.Session() as sess:
-		if FLAGS.checkpoint_file == None:
-	    latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
-		else: latest_checkpoint = FLAGS.checkpoint_file
+    if FLAGS.checkpoint_file == None:
+      latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+    else: 
+      latest_checkpoint = FLAGS.checkpoint_file
 
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: " + latest_checkpoint)
@@ -239,14 +238,15 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         iteration_info_dict = evl_metrics.accumulate(predictions_val,
                                                      labels_val, loss_val)
         iteration_info_dict["examples_per_second"] = example_per_second
+        current_average_loss = evl_metrics.sum_loss / examples_processed
 
         iterinfo = utils.AddGlobalStepSummary(
             summary_writer,
             global_step_val,
             iteration_info_dict,
             summary_scope="Eval")
-        logging.info("examples_processed: %d | %s", examples_processed,
-                     iterinfo)
+        logging.info("examples_processed: %d | %s | average loss: %.4f", examples_processed,
+                     iterinfo, current_average_loss)
 
     except tf.errors.OutOfRangeError as e:
       logging.info(

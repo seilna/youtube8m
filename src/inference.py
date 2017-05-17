@@ -16,7 +16,7 @@
 
 import os
 import time
-
+import h5py
 import numpy
 import tensorflow as tf
 
@@ -146,9 +146,15 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     out_file.write("VideoId,LabelConfidencePairs\n")
 
     try:
+      f = h5py.File("raw_predictions.h5", "w")
       while not coord.should_stop():
           video_id_batch_val, video_batch_val,num_frames_batch_val = sess.run([video_id_batch, video_batch, num_frames_batch])
           predictions_val, = sess.run([predictions_tensor], feed_dict={input_tensor: video_batch_val, num_frames_tensor: num_frames_batch_val})
+          from IPython import embed
+          embed()
+          for i in range(batch_size):
+            f.create_dataset(video_id_batch_val[i], data=predictions_val[i])
+
           now = time.time()
           num_examples_processed += len(video_batch_val)
           num_classes = predictions_val.shape[1]

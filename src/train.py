@@ -45,6 +45,7 @@ if __name__ == "__main__":
       "features (i.e. tensorflow.SequenceExample), then set --reader_type "
       "format. The (Sequence)Examples are expected to have 'rgb' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
+
   flags.DEFINE_string("feature_names", "mean_rgb", "Name of the feature "
                       "to use for training.")
   flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
@@ -562,7 +563,7 @@ class Trainer(object):
                  batch_size=FLAGS.batch_size,
                  num_epochs=FLAGS.num_epochs)
 
-    return tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
+    return tf.train.Saver(max_to_keep=5, keep_checkpoint_every_n_hours=0.5)
 
 
 def get_reader():

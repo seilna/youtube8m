@@ -33,6 +33,8 @@ import utils
 FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
+  flags.DEFINE_string("checkpoint_file", None, "checkpoint file name")
+  flags.DEFINE_string("raw_prediction", "./raw_prediction.h5", "raw prediction file name")
   flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
                       "The directory to load the model files from.")
   flags.DEFINE_string("output_file", "",
@@ -113,7 +115,10 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
 def inference(reader, train_dir, data_pattern, out_file_location, batch_size, top_k):
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess, gfile.Open(out_file_location, "w+") as out_file:
     video_id_batch, video_batch, num_frames_batch = get_input_data_tensors(reader, data_pattern, batch_size)
-    latest_checkpoint = tf.train.latest_checkpoint(train_dir)
+
+    if FLAGS.checkpoint_file == None:
+	    latest_checkpoint = tf.train.latest_checkpoint(train_dir)
+    else: latest_checkpoint = FLAGS.checkpoint_file
     if latest_checkpoint is None:
       raise Exception("unable to find a checkpoint at location: %s" % train_dir)
     else:
@@ -146,7 +151,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     out_file.write("VideoId,LabelConfidencePairs\n")
 
     try:
-      f = h5py.File("raw_predictions.h5", "w")
+      f = h5py.File(FLAGS.raw_prediction, "w")
       while not coord.should_stop():
           video_id_batch_val, video_batch_val,num_frames_batch_val = sess.run([video_id_batch, video_batch, num_frames_batch])
           predictions_val, = sess.run([predictions_tensor], feed_dict={input_tensor: video_batch_val, num_frames_tensor: num_frames_batch_val})

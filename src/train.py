@@ -30,6 +30,7 @@ from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
 from tensorflow.python.client import device_lib
+from hickle import load
 from IPython import embed
 import utils
 
@@ -382,7 +383,6 @@ class Trainer(object):
     meta_filename = self.get_meta_filename(start_new_model, self.train_dir)
 
     with tf.Graph().as_default() as graph:
-
       if meta_filename:
         saver = self.recover_model(meta_filename)
 
@@ -412,6 +412,7 @@ class Trainer(object):
     logging.info("%s: Starting managed session.", task_as_string(self.task))
     with sv.managed_session(target, config=self.config) as sess:
       try:
+
 				# Check the variables and their shapes
         model_vars = tf.contrib.framework.get_model_variables()
         slim.model_analyzer.analyze_vars(model_vars, print_info=True)
@@ -655,6 +656,7 @@ def main(unused_argv):
         [frame_level_models, video_level_models])()
 
     reader = get_reader()
+
 
     model_exporter = export_model.ModelExporter(
         frame_features=FLAGS.frame_features,

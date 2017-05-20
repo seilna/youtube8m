@@ -25,6 +25,7 @@ import tensorflow.contrib.slim as slim
 from tensorflow import flags
 
 FLAGS = flags.FLAGS
+flags.DEFINE_float("dropout", 1.0, "LayerNorm dropout ratio")
 flags.DEFINE_integer("iterations", 30,
                      "Number of frames per batch for DBoF.")
 flags.DEFINE_bool("dbof_add_batch_norm", True,
@@ -225,7 +226,7 @@ class LayerNormLstmAveConcatModel(models.BaseModel):
 
     stacked_lstm = tf.contrib.rnn.LayerNormBasicLSTMCell(
       num_units=lstm_size,
-      dropout_keep_prob=0.8)
+      dropout_keep_prob=FLAGS.dropout)
 
     loss = 0.0
 

@@ -16,6 +16,8 @@
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
+
+from hickle import load
 from tensorflow.python.saved_model import builder as saved_model_builder
 from tensorflow.python.saved_model import signature_constants
 from tensorflow.python.saved_model import signature_def_utils
@@ -32,6 +34,14 @@ class ModelExporter(object):
     self.reader = reader
 
     with tf.Graph().as_default() as graph:
+      """
+      label_corelation_data = load("./data/corelated_matrix.hkl")
+      label_corelation_matrix = tf.nn.softmax(tf.cast(tf.constant(label_corelation_data), tf.float32))
+      tf.add_to_collection("label_corelation_matrix", label_corelation_matrix)
+      """
+      
+
+
       self.inputs, self.outputs = self.build_inputs_and_outputs()
       self.graph = graph
       self.saver = tf.train.Saver(tf.trainable_variables(), sharded=True)

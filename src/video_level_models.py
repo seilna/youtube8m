@@ -19,11 +19,13 @@ import models
 import tensorflow as tf
 import utils
 
+from hickle import load
 from tensorflow import flags
 import tensorflow.contrib.slim as slim
 import tensorflow.contrib.layers as layers
 
 FLAGS = flags.FLAGS
+flags.DEFINE_float("corelation_gamma", 0.1, "corelation matrix strength")
 flags.DEFINE_integer(
     "moe_num_mixtures", 2,
     "The number of mixtures (excluding the dummy 'expert') used for MoeModel.")
@@ -173,3 +175,66 @@ class Moe_2Layer_Model(models.BaseModel):
     final_probabilities = tf.reshape(final_probabilities_by_class_and_batch,
                                     [-1, vocab_size])
     return {"predictions": final_probabilities}
+
+
+
+class MoeWithLabelCorelationModel(models.BaseModel):
+
+  """A softmax over a mixture of logistic models (with L2 regularization)."""
+
+  def create_model(self,
+                   model_input,
+                   vocab_size,
+                   num_mixtures=None,
+                   l2_penalty=1e-8,
+                   **unused_params):
+    label_corelation_data = load("./data/corelated_matrix.hkl")
+    label_corelation_matrix = tf.nn.softmax(tf.cast(tf.constant(label_corelation_data), tf.float32))
+    tf.add_to_collection("label_corelation_matrix", label_corelation_matrix)
+     
+    num_mixtures = num_mixtures or FLAGS.moe_num_mixtures
+
+    gate_activations = slim.fully_connected(
+        model_input,
+        vocab_size * (num_mixtures + 1),
+        activation_fn=None,
+        biases_initializer=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="gates")
+
+    expert_activations = slim.fully_connected(
+        model_input,
+        vocab_size * num_mixtures,
+        activation_fn=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="experts")
+
+    expert_activations = tf.reshape(expert_activations, shape=[-1, vocab_size, num_mixtures])
+    expert_activations = tf.transpose(expert_activations, perm=[0, 2, 1])
+    expert_activations = tf.reshape(expert_activations, shape=[-1, vocab_size])
+
+
+    expert_activations = FLAGS.corelation_gamma * tf.matmul(expert_activations, label_corelation_matrix) + (1 - FLAGS.corelation_gamma) * expert_activations
+
+    expert_activations = tf.reshape(expert_activations, shape=[-1, num_mixtures, vocab_size])
+    expert_activations = tf.transpose(expert_activations, perm=[0, 2, 1])
+
+
+    gating_distribution = tf.nn.softmax(tf.reshape(
+        gate_activations,
+        [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
+    expert_distribution = tf.nn.sigmoid(tf.reshape(
+        expert_activations,
+        [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
+
+    final_probabilities_by_class_and_batch = tf.reduce_sum(
+        gating_distribution[:, :num_mixtures] * expert_distribution, 1)
+    final_probabilities = tf.reshape(final_probabilities_by_class_and_batch,
+                                     [-1, vocab_size])
+
+
+    #final_probabilities = FLAGS.corelation_gamma * tf.matmul(final_probabilities, label_corelation_matrix) + (1 - FLAGS.corelation_gamma) * final_probabilities
+
+
+    return {"predictions": final_probabilities}
+

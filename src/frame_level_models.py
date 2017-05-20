@@ -203,7 +203,7 @@ class DbofModel(models.BaseModel):
         vocab_size=vocab_size,
         **unused_params)
 
-class LayerNormLstmModel(models.BaseModel):
+class LayerNormLstmAveConcatModel(models.BaseModel):
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
     """Creates a model which uses a stack of LSTMs to represent the video.
@@ -224,7 +224,8 @@ class LayerNormLstmModel(models.BaseModel):
     number_of_layers = FLAGS.lstm_layers
 
     stacked_lstm = tf.contrib.rnn.LayerNormBasicLSTMCell(
-      num_units=lstm_size)
+      num_units=lstm_size,
+      dropout_keep_prob=0.8)
 
     loss = 0.0
 
@@ -233,6 +234,10 @@ class LayerNormLstmModel(models.BaseModel):
                                        dtype=tf.float32)
 
     state = tf.concat([state[0], state[1]], 1)
+
+    average_state = tf.nn.l2_normalize(tf.reduce_sum(model_input, axis=1), dim=1)
+    state = tf.concat([state, average_state], 1)
+
 
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
@@ -396,10 +401,11 @@ class ordinalTopK(models.BaseModel):
     model_input_trans = tf.transpose(a=model_input, perm=[0,2,1]) # [batch_size, num_features, max_frames]
     topk, indices = tf.nn.top_k(input=model_input_trans, k=k, sorted=True) # topk: [batch_size, num_features, k]
     topk_trans = tf.transpose(a=topk, perm=[0,2,1]) # [batch_size, k, num_features]
+    topk_trans = tf.nn.l2_normalize(topk_trans, dim=2)
     
     concat = tf.concat([mean, var, topk_trans], 1) # [batch_size, k+2, num_features]
     concat_flat = tf.reshape(concat, shape=[-1, (k+2)*num_features]) # [batch_size, (k+2) * num_featuers]
-    concat_flat = tf.nn.l2_normalize(concat_flat, dim=1)
+    #concat_flat = tf.nn.l2_normalize(concat_flat, dim=1)
     concat_flat.set_shape([None, (k+2)*num_features])
     
     aggregated_model = getattr(video_level_models, FLAGS.video_level_classifier_model)
@@ -429,7 +435,7 @@ class CNN(models.BaseModel):
                         trainable=True
                         )
 
-    cnn_activation = tf.nn.l2_normalize(cnn_activation, dim=3)
+    #cnn_activation = tf.nn.l2_normalize(cnn_activation, dim=3)
 
     # [batch_size, 1, 1, num_channels]
     max_pool_over_time = tf.contrib.layers.max_pool2d(
@@ -479,14 +485,29 @@ class Lstm_average_concat(models.BaseModel):
    
 class SoftClusteringModel(models.BaseModel):
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
-    att_matrix = tf.matmul(model_input, tf.transpose(model_input, [0,2,1])) # [batch_size, max_frames, max_frames]
+    input_features = slim.fully_connected(
+      model_input,
+      FLAGS.feature_dim,
+      activation_fn=tf.nn.relu,
+      weights_regularizer=slim.l2_regularizer(1e-8)
+      )
+
+    att_matrix = tf.matmul(input_features, tf.transpose(input_features, [0,2,1])) # [batch_size, max_frames, max_frames]
 
     att_matrix = tf.expand_dims(att_matrix, -1)
     att = tf.reduce_sum(att_matrix, axis=2) # [batch_size, max_frames]
     att = tf.nn.softmax(FLAGS.alpha * att)
 
     state = tf.reduce_sum(model_input * att, axis=1) # [batch_size, num_features]
-    state = tf.nn.l2_normalize(state, dim=1)
+    state = tf.contrib.layers.layer_norm(
+      inputs=state,
+      center=True,
+      scale=True,
+      activation_fn=tf.nn.relu,
+      trainable=True)
+
+
+    #state = tf.nn.l2_normalize(state, dim=1)
     
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)

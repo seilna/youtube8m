@@ -156,9 +156,9 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
           video_id_batch_val, video_batch_val,num_frames_batch_val = sess.run([video_id_batch, video_batch, num_frames_batch])
           predictions_val, = sess.run([predictions_tensor], feed_dict={input_tensor: video_batch_val, num_frames_tensor: num_frames_batch_val})
           for i in range(batch_size):
-						try:
-	            f.create_dataset(video_id_batch_val[i], data=predictions_val[i])
-						except: continue
+            try:
+              f.create_dataset(video_id_batch_val[i], data=predictions_val[i])
+            except: continue
 
           now = time.time()
           num_examples_processed += len(video_batch_val)

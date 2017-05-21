@@ -45,7 +45,7 @@ flags.DEFINE_string("video_level_classifier_model", "MoeModel",
                     "Some Frame-Level models can be decomposed into a "
                     "generalized pooling operation followed by a "
                     "classifier layer")
-flags.DEFINE_integer("lstm_cells", 1024, "Number of LSTM cells.")
+flags.DEFINE_integer("lstm_cells", 1152, "Number of LSTM cells.")
 flags.DEFINE_integer("lstm_layers", 2, "Number of LSTM layers.")
 flags.DEFINE_integer("topk", 5, "Ordinal TopK numbers.")
 flags.DEFINE_integer("feature_dim", 1152, "rgb:1024, audio:128, rgb+audio:1156")
@@ -207,20 +207,6 @@ class DbofModel(models.BaseModel):
 class LayerNormLstmAveConcatModel(models.BaseModel):
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
-    """Creates a model which uses a stack of LSTMs to represent the video.
-
-    Args:
-      model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
-                   input features.
-      vocab_size: The number of classes in the dataset.
-      num_frames: A vector of length 'batch' which indicates the number of
-           frames for each video (before padding).
-
-    Returns:
-      A dictionary with a tensor containing the probability predictions of the
-      model in the 'predictions' key. The dimensions of the tensor are
-      'batch_size' x 'num_classes'.
-    """
     lstm_size = FLAGS.lstm_cells
     number_of_layers = FLAGS.lstm_layers
 

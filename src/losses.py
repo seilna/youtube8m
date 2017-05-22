@@ -19,6 +19,10 @@ from tensorflow import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_float("delta", 0.5, "delta value for Huber Loss")
+flags.DEFINE_float("alfa", 0.95, "alfa parameter for center loss.")
+flags.DEFINE_float("epsilon", 10e-6, "epsilon parameter for center loss.")
+flags.DEFINE_float("beta", 1e-3, "beta parameter for center loss.")
+
 
 class BaseLoss(object):
   """Inherit from this class when implementing new losses."""
@@ -183,9 +187,9 @@ class CenterLoss(BaseLoss):
   def calculate_loss(self, predictions, labels, **unused_params):
     with tf.name_scope("loss_center"):
 
-      epsilon = 10e-6
-      alfa = 0.95
-      beta = 1e-3
+      epsilon = FLAGS.epsilon
+      alfa = FLAGS.alfa
+      beta = FLAGS.beta
 
       float_labels = tf.cast(labels, tf.float32)
       cross_entropy_loss = float_labels * tf.log(predictions + epsilon) + (

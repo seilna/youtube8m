@@ -282,6 +282,8 @@ def build_graph(reader,
 
           if "loss" in result.keys():
             label_loss = result["loss"]
+          elif "features" in result.keys():
+            label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i], feature=result["features"])            
           else:
             label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i])
 

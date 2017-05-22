@@ -173,3 +173,37 @@ class SoftmaxLoss(BaseLoss):
       softmax_loss = tf.negative(tf.reduce_sum(
           tf.multiply(norm_float_labels, tf.log(softmax_outputs)), 1))
     return tf.reduce_mean(softmax_loss)
+
+
+class CenterLoss(BaseLoss):
+  """Calculate the Centet loss using bottleneck feature vector.
+  loss = cross_entropy_loss + 0.001 (beta) * center_loss
+  The function calculates the loss in the following way: 
+  """
+  def calculate_loss(self, predictions, labels, **unused_params):
+    with tf.name_scope("loss_center"):
+
+      epsilon = 10e-6
+      alfa = 0.95
+      beta = 1e-3
+
+      float_labels = tf.cast(labels, tf.float32)
+      cross_entropy_loss = float_labels * tf.log(predictions + epsilon) + (
+          1 - float_labels) * tf.log(1 - predictions + epsilon)
+      cross_entropy_loss = tf.negative(cross_entropy_loss)
+      xent_loss = tf.reduce_mean(tf.reduce_sum(cross_entropy_loss, 1))      
+
+      features = unused_params['feature']      
+      centers = tf.get_variable('centers', [labels.shape[1], features.shape[1]], dtype=tf.float32,
+          initializer=tf.constant_initializer(0), trainable=False)
+      
+      float_labels = tf.cast(labels, tf.float32)
+      index = tf.argmax(float_labels, axis=1)
+      centers_batch = tf.gather(centers, index)
+      diff = (1 - alfa) * (centers_batch - features)
+      centers = tf.scatter_sub(centers, index, diff)
+      center_loss = tf.nn.l2_loss(features - centers_batch)
+
+      loss = xent_loss + beta * center_loss
+
+      return loss

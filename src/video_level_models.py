@@ -34,6 +34,10 @@ flags.DEFINE_integer(
     "dim_gate", 2048,
     "2-layer moe model dimension")
 
+flags.DEFINE_integer(
+    "bottleneck_size", 2048,
+    "bottleneck feature dimension")
+
 class LogisticModel(models.BaseModel):
   """Logistic model with L2 regularization."""
 
@@ -52,6 +56,40 @@ class LogisticModel(models.BaseModel):
         model_input, vocab_size, activation_fn=tf.nn.sigmoid,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
     return {"predictions": output}
+
+class Logistic_Multi_Layer_Model(models.BaseModel):
+  """Logistic model with L2 regularization."""
+
+  def create_model(self, model_input, vocab_size, l2_penalty=1e-8, **unused_params):
+    """Creates a logistic model.
+
+    Args:
+      model_input: 'batch' x 'num_features' matrix of input features.
+      vocab_size: The number of classes in the dataset.
+
+    Returns:
+      A dictionary with a tensor containing the probability predictions of the
+      model in the 'predictions' key. The dimensions of the tensor are
+      batch_size x num_classes."""
+
+    bottleneck_size = FLAGS.bottleneck_size
+
+    print("Logistic_Multi_Layer_Model")
+
+    fc1 = slim.fully_connected(
+        model_input, vocab_size * 2, activation_fn=tf.nn.relu,
+        weights_regularizer=slim.l2_regularizer(l2_penalty))
+    #fc1 = slim.dropout(fc1, 0.5, scope='dropout1')
+
+    fc2 = slim.fully_connected(
+        fc1, bottleneck_size, activation_fn=tf.nn.relu,
+        weights_regularizer=slim.l2_regularizer(l2_penalty))
+    #fc2 = slim.dropout(fc2, 0.5, scope='dropout2')   
+      
+    output = slim.fully_connected(
+        fc2, vocab_size, activation_fn=tf.nn.sigmoid,
+        weights_regularizer=slim.l2_regularizer(l2_penalty))
+    return {"predictions": output, "features":fc2}    
 
 class MoeModel(models.BaseModel):
 

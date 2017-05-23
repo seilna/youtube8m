@@ -371,6 +371,16 @@ class Trainer(object):
 #       raise StandardError("%s: Only one replica of master expected",
 #                           task_as_string(self.task))
 
+  def get_data(self):
+      import pudb
+      pudb.set_trace()
+      unused_video_id, model_input_raw, labels_batch, num_frames = (
+          get_input_data_tensors(
+              self.reader,
+              FLAGS.train_data_pattern,
+              batch_size=FLAGS.batch_size,
+              num_readers=FLAGS.num_readers,
+              num_epochs=1))
   def run(self, start_new_model=False):
     """Performs training on the currently defined Tensorflow graph.
 
@@ -399,7 +409,6 @@ class Trainer(object):
         train_op = tf.get_collection("train_op")[0]
         init_op = tf.global_variables_initializer()
 
-		
     sv = tf.train.Supervisor(
         graph,
         logdir=self.train_dir,
@@ -676,4 +685,5 @@ def main(unused_argv):
                      (task_as_string(task), task.type))
 
 if __name__ == "__main__":
+  #app.get_data()
   app.run()

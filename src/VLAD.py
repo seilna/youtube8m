@@ -44,12 +44,14 @@ def  kMeansDictionary_tf(training, k, max_iter=290, input_fn=None, fit=None):
     return est
 
 
-def VLAD_tf(X,visualDictionary):
-
-    predictedLabels = visualDictionary.predict(X)
+def VLAD_tf(X):
+    visualDictionary = tf.contrib.learn.KMeansClustering(
+        relative_tolerance=0.0001,
+        model_dir='/data1/yj/kmeans/')
+    predictedLabels = visualDictionary.predict(x=X, input_fn=None)
     centers = visualDictionary.clusters()
-    labels=visualDictionary.labels_
-    k=visualDictionary.num_clusters
+    #labels=visualDictionary.labels_
+    k=visualDictionary.params['num_clusters']
 
     m,d = X.shape
     V=tf.zeros([k,d])

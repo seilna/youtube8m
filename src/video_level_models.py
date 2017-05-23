@@ -25,6 +25,7 @@ import tensorflow.contrib.slim as slim
 import tensorflow.contrib.layers as layers
 
 FLAGS = flags.FLAGS
+flags.DEFINE_float("sharpening", 1.0, "Corelation matrix sharpening parameters")
 flags.DEFINE_float("corelation_gamma", 0.1, "corelation matrix strength")
 flags.DEFINE_integer(
     "moe_num_mixtures", 2,
@@ -226,8 +227,12 @@ class MoeWithLabelCorelationModel(models.BaseModel):
                    num_mixtures=None,
                    l2_penalty=1e-8,
                    **unused_params):
+
+    sharpening = FLAGS.sharpening
     label_corelation_data = load("./data/corelated_matrix.hkl")
-    label_corelation_matrix = tf.nn.softmax(tf.cast(tf.constant(label_corelation_data), tf.float32))
+
+    label_corelation_matrix = tf.nn.softmax(
+        tf.cast(tf.Variable(label_corelation_data), tf.float32))
     tf.add_to_collection("label_corelation_matrix", label_corelation_matrix)
      
     num_mixtures = num_mixtures or FLAGS.moe_num_mixtures

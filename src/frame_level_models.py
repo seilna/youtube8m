@@ -235,7 +235,6 @@ class LayerNormLstmAveConcatModel(models.BaseModel):
         **unused_params)
 
 
-
 class LstmModel(models.BaseModel):
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
@@ -276,6 +275,27 @@ class LstmModel(models.BaseModel):
         model_input=state,
         vocab_size=vocab_size,
         **unused_params)
+class Many2ManyLstmModel(models.BaseModel):
+  def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    lstm_size = FLAGS.lstm_cells
+    number_of_layers = FLAGS.lstm_layers
+
+    cell = tf.contrib.rnn.BasicLSTMCell(lstm_size)
+    outputs, state = tf.nn.dynamic_rnn(
+      cell=cell, 
+      inputs=model_input, 
+      sequence_length=num_frames,
+      dtype=tf.float32) # output = (batch, num_frames, lstm_size)
+
+    class_per_output = slim.fully_connected(
+      outputs,
+      4716,
+      activation_fn=tf.nn.relu,
+      weights_regularizer=slim.l2_regularizer(1e-8)) # (batch, num_frames, 4716)
+
+    final_probabilities = tf.nn.sigmoid(tf.reduce_sum(class_per_output, 1))
+    return {"predictions": final_probabilities}
+
 
 class PositionEncodingModel(models.BaseModel):
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):

@@ -290,10 +290,10 @@ class Many2ManyLstmModel(models.BaseModel):
     class_per_output = slim.fully_connected(
       outputs,
       4716,
-      activation_fn=tf.nn.relu,
+      activation_fn=tf.nn.sigmoid,
       weights_regularizer=slim.l2_regularizer(1e-8)) # (batch, num_frames, 4716)
 
-    final_probabilities = tf.nn.sigmoid(tf.reduce_sum(class_per_output, 1))
+    final_probabilities = tf.reduce_mean(class_per_output, 1)
     return {"predictions": final_probabilities}
 
 

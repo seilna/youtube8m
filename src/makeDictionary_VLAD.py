@@ -21,7 +21,7 @@ args = vars(ap.parse_args())
 '''
 #args
 path = "/data1/yj/yt8m_cluster/feature.pkl"
-k = 512
+k = 1024
 #output
 output="/data1/yj/yt8m_cluster/cluster.pkl"
 
@@ -29,18 +29,36 @@ output="/data1/yj/yt8m_cluster/cluster.pkl"
 #computing the visual dictionary
 print("estimating a visual dictionary of size: "+str(k)+ " for descriptors in path:"+path)
 import cPickle as pkl
-'''
+
 with open(path, 'rb') as f:
     descriptors=pkl.load(f)
-
-part_len = len(descriptors)/6
-descriptors = descriptors[:part_len]
-'''
-
-descriptors = np.zeros([20000,1024],dtype=np.float32)
+#descriptors = np.zeros([20000,1024],dtype=np.float32)
 
 def input_fn():
     return tf.constant(descriptors, dtype=tf.float32), tf.constant(descriptors,dtype=tf.float32)
+#visualDictionary=kMeansDictionary_tf(descriptors,k)
+
+est = tf.contrib.learn.KMeansClustering(
+    num_clusters = k,
+    relative_tolerance=0.0001,
+    model_dir='/data1/yj/kmeans/')
+
+
+part_len = len(descriptors)/10 -1
+#descriptors = descriptors[:part_len]
+
+for n in range(3):
+    for e in range(10):
+        training = descriptors[e*part_len:(e+1)*part_len]
+        for i in range(10):
+            print 'epoch ' + str(e)
+            print str(i) + 'iteration'
+            _ = est.partial_fit(input_fn=lambda: (constant_op.constant(training), None))
+
+
+
+
+
 def serving_input_fn():
     serialized_tf_example = array_ops.placeholder(dtype=dtypes.string,
                                                 shape=[None],
@@ -49,14 +67,11 @@ def serving_input_fn():
     return input_fn_utils.InputFnOps(
         features, labels, {'examples': serialized_tf_example})
 
-visualDictionary=kMeansDictionary_tf(descriptors,k,input_fn=input_fn)
-
-import ipdb
-ipdb.set_trace()
 
 #visualDictionary.export_savedmodel(export_dir_base='/data1/yj/kmeans',serving_input_fn=serving_input_fn)
 
 
 #with open(output, 'wb') as f:
 #	pickle.dump(visualDictionary, f)
-
+import ipdb
+ipdb.set_trace()

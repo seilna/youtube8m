@@ -19,7 +19,7 @@ def  kMeansDictionary(training, k, max_iter=290):
 
 
 
-def  kMeansDictionary_tf(training, k, max_iter=290, input_fn=None):
+def  kMeansDictionary_tf(training, k, max_iter=290, input_fn=None, fit=None):
 
     #K-means algorithm
     #est = KMeans(n_clusters=k,init='k-means++',tol=0.0001,verbose=1).fit(training)
@@ -34,7 +34,10 @@ def  kMeansDictionary_tf(training, k, max_iter=290, input_fn=None):
         num_clusters = k,
         relative_tolerance=0.0001,
         model_dir='/data1/yj/kmeans/')
-    _ = est.fit(input_fn=lambda: (constant_op.constant(training), None), steps=100)
+    if fit is not None:
+        for i in range(10):
+            print i
+            _ = est.fit(input_fn=lambda: (constant_op.constant(training), None))
     #centers = est.cluster_centers_
     #labels = est.labels_
     #est.predict(X)

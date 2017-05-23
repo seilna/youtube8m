@@ -6,6 +6,7 @@ import pickle
 import glob
 import cv2
 import tensorflow as tf
+from tensorflow.python.framework import constant_op
 
 def  kMeansDictionary(training, k, max_iter=290):
 
@@ -22,11 +23,18 @@ def  kMeansDictionary_tf(training, k, max_iter=290, input_fn=None):
 
     #K-means algorithm
     #est = KMeans(n_clusters=k,init='k-means++',tol=0.0001,verbose=1).fit(training)
-    import ipdb
-    ipdb.set_trace()
+    '''
+    est = tf.contrib.factorization.KMeans(
+        training,
+        num_clusters=k,
+        initial_clusters=tf.contrib.factorization.KMEANS_PLUS_PLUS_INIT,
+        use_mini_batch=True)
+    '''
     est = tf.contrib.learn.KMeansClustering(
-        num_clusters=k, relative_tolerance=0.0001)
-    _ = est.fit(input_fn=input_fn)
+        num_clusters = k,
+        relative_tolerance=0.0001,
+        model_dir='/data1/yj/kmeans/')
+    _ = est.fit(input_fn=lambda: (constant_op.constant(training), None), steps=100)
     #centers = est.cluster_centers_
     #labels = est.labels_
     #est.predict(X)

@@ -3,6 +3,11 @@ import argparse
 import glob
 import cv2
 import tensorflow as tf
+from tensorflow.python.ops import array_ops
+from tensorflow.python.framework import dtypes
+from tensorflow.contrib.learn.python.learn.utils import input_fn_utils
+
+
 '''
 #parser
 ap = argparse.ArgumentParser()
@@ -24,24 +29,34 @@ output="/data1/yj/yt8m_cluster/cluster.pkl"
 #computing the visual dictionary
 print("estimating a visual dictionary of size: "+str(k)+ " for descriptors in path:"+path)
 import cPickle as pkl
+'''
 with open(path, 'rb') as f:
     descriptors=pkl.load(f)
-descriptors = np.zeros([10000,1024],dtype=np.float32)
 
+part_len = len(descriptors)/6
+descriptors = descriptors[:part_len]
+'''
+
+descriptors = np.zeros([20000,1024],dtype=np.float32)
 
 def input_fn():
-    return tf.constant(descriptors, dtype=tf.float32), None
-
+    return tf.constant(descriptors, dtype=tf.float32), tf.constant(descriptors,dtype=tf.float32)
+def serving_input_fn():
+    serialized_tf_example = array_ops.placeholder(dtype=dtypes.string,
+                                                shape=[None],
+                                                name='input_example_tensor')
+    features, labels = input_fn()
+    return input_fn_utils.InputFnOps(
+        features, labels, {'examples': serialized_tf_example})
 
 visualDictionary=kMeansDictionary_tf(descriptors,k,input_fn=input_fn)
 
 import ipdb
 ipdb.set_trace()
 
-visualDictionary.export_savedmodel(export_dir_base='./data1/yj/kmeans/',serving_input_fn=input_fn)
+#visualDictionary.export_savedmodel(export_dir_base='/data1/yj/kmeans',serving_input_fn=serving_input_fn)
 
 
 #with open(output, 'wb') as f:
 #	pickle.dump(visualDictionary, f)
 
-print("The visual dictionary  is saved in "+file)

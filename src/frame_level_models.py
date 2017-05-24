@@ -16,6 +16,7 @@
 """
 import math
 
+import numpy as np
 import models
 import video_level_models
 import tensorflow as tf
@@ -26,6 +27,7 @@ from tensorflow import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool("position_encoding", False, "position encoding on model_input")
+flags.DEFINE_bool("interpolate", False, "interpolate to frame level inputs")
 flags.DEFINE_float("dropout", 1.0, "LayerNorm dropout ratio")
 flags.DEFINE_integer("iterations", 30,
                      "Number of frames per batch for DBoF.")
@@ -464,11 +466,15 @@ class CNN(models.BaseModel):
 
 class Lstm_average_concat(models.BaseModel):
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
-    
     if FLAGS.position_encoding == True:
       l = [ [ (1-j/J) - (k/d) * (1-2*j/J) for k in range(d) ] for j in range(J)]
       model_input = model_input * l
 
+    if FLAGS.interpolate == True:
+      interpolate = tf.cast(tf.range(300), tf.float32) / 300.0
+      interpolate = tf.expand_dims(interpolate, 0)
+      interpolate = tf.expand_dims(interpolate, 2) # (1, 300, 1)
+      model_input = model_input * interpolate
     lstm_size = FLAGS.lstm_cells
     number_of_layers = FLAGS.lstm_layers
 

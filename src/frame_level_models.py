@@ -25,6 +25,7 @@ import tensorflow.contrib.slim as slim
 from tensorflow import flags
 
 FLAGS = flags.FLAGS
+flags.DEFINE_bool("position_encoding", False, "position encoding on model_input")
 flags.DEFINE_float("dropout", 1.0, "LayerNorm dropout ratio")
 flags.DEFINE_integer("iterations", 30,
                      "Number of frames per batch for DBoF.")
@@ -285,6 +286,7 @@ class Many2ManyLstmModel(models.BaseModel):
       cell=cell, 
       inputs=model_input, 
       sequence_length=num_frames,
+      parallel_iterations=128,
       dtype=tf.float32) # output = (batch, num_frames, lstm_size)
 
     class_per_output = slim.fully_connected(
@@ -462,6 +464,11 @@ class CNN(models.BaseModel):
 
 class Lstm_average_concat(models.BaseModel):
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    
+    if FLAGS.position_encoding == True:
+      l = [ [ (1-j/J) - (k/d) * (1-2*j/J) for k in range(d) ] for j in range(J)]
+      model_input = model_input * l
+
     lstm_size = FLAGS.lstm_cells
     number_of_layers = FLAGS.lstm_layers
 

@@ -467,6 +467,8 @@ class CNN(models.BaseModel):
 class Lstm_average_concat(models.BaseModel):
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
     if FLAGS.position_encoding == True:
+      J = 300
+      d = 1152
       l = [ [ (1-j/J) - (k/d) * (1-2*j/J) for k in range(d) ] for j in range(J)]
       model_input = model_input * l
 

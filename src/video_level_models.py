@@ -18,7 +18,7 @@ import math
 import models
 import tensorflow as tf
 import utils
-
+import numpy as np
 from hickle import load
 from tensorflow import flags
 import tensorflow.contrib.slim as slim
@@ -230,9 +230,9 @@ class MoeWithLabelCorelationModel(models.BaseModel):
 
     sharpening = FLAGS.sharpening
     label_corelation_data = load("./data/corelated_matrix.hkl")
+    label_corelation_data = (label_corelation_data - np.average(label_corelation_data, axis=1))/np.sum(label_corelation_data, axis=1)
 
-    label_corelation_matrix = tf.nn.softmax(
-        tf.cast(tf.Variable(label_corelation_data), tf.float32))
+    label_corelation_matrix = tf.cast(tf.Variable(label_corelation_data, trainable=True), tf.float32)
     tf.add_to_collection("label_corelation_matrix", label_corelation_matrix)
      
     num_mixtures = num_mixtures or FLAGS.moe_num_mixtures

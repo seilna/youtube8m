@@ -44,17 +44,20 @@ def  kMeansDictionary_tf(training, k, max_iter=290, input_fn=None, fit=None):
     return est
 
 
-def VLAD_tf(X):
+def VLAD_tf(X,visualDictionary):
+    '''
     visualDictionary = tf.contrib.learn.KMeansClustering(
         relative_tolerance=0.0001,
         model_dir='/data1/yj/kmeans/')
-    predictedLabels = visualDictionary.predict(x=X, input_fn=None)
+    '''
+    predictedLabels = visualDictionary.predict(x=X, input_fn=None, as_iterable=False)
+    predictedLabels = predictedLabels['cluster_idx']
     centers = visualDictionary.clusters()
     #labels=visualDictionary.labels_
     k=visualDictionary.params['num_clusters']
 
     m,d = X.shape
-    V=tf.zeros([k,d])
+    V=np.zeros([k,d])
     #computing the differences
 
     # for all the clusters (visual words)
@@ -62,16 +65,16 @@ def VLAD_tf(X):
         # if there is at least one descriptor in that cluster
         if np.sum(predictedLabels==i)>0:
             # add the diferences
-            V[i]=tf.sum(X[predictedLabels==i,:]-centers[i],axis=0)
+            V[i]=np.sum(X[predictedLabels==i,:]-centers[i],axis=0)
 
 
     V = V.flatten()
     # power normalization, also called square-rooting normalization
-    V = tf.sign(V)*tf.sqrt(tf.abs(V))
+    V = np.sign(V)*np.sqrt(np.abs(V))
 
     # L2 normalization
 
-    V = V/tf.sqrt(tf.tensordot(V,V))
+    V = V/np.sqrt(np.dot(V,V))
     return V
 
 

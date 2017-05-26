@@ -3,7 +3,11 @@ from glob import glob
 import pudb
 import numpy as np
 import utils
-files = glob('/data1/common_datasets/yt8m-data/frame-level/train*.tfrecord')[::10]
+from VLAD import *
+import pudb
+
+files = glob.glob('/data1/common_datasets/yt8m-data/frame-level/train*.tfrecord')
+
 print len(files)
 filename_queue = tf.train.string_input_producer(files, num_epochs=1, shuffle=True)
 
@@ -25,7 +29,7 @@ decoded_audio = tf.reshape(tf.cast(tf.decode_raw(features['audio'], tf.uint8), t
   shape=[-1, 128])
 
 import cPickle as pkl
-cluster_dir = '/data1/yj/yt8m_cluster/feature.pkl'
+cluster_dir = '/data1/yj/yt8m_cluster/audio_feature.pkl'
 
 with tf.Session() as sess:
   sess.run(tf.global_variables_initializer())
@@ -42,6 +46,10 @@ with tf.Session() as sess:
       capacity=batch_size * 2,
       dynamic_pad=True)
   '''
+  vis_dic = tf.contrib.learn.KMeansClustering(
+      num_clusters = 256,
+      relative_tolerance=0.0001,
+      model_dir='/data1/yj/kmeans/')
   while not coord.should_stop():
     #print sess.run(features)
     '''
@@ -49,20 +57,17 @@ with tf.Session() as sess:
     print len(sess.run(features))
     print sess.run(features).keys()
     print type(sess.run(features)['rgb'])
-    print sess.run(features)['rgb'].shape
-    print sess.run(features)['audio'].shape
-    print sess.run(contexts)
-    print sess.run(contexts)['video_id']
-    print sess.run(decoded_rgb).shape
-    print sess.run(decoded_audio).shape
     '''
-    drgb = sess.run(decoded_rgb)
+    #drgb = utils.Dequantize(sess.run(decoded_rgb))
+    #pudb.set_trace()
+    #rgb_VLAD = VLAD_tf(drgb, vis_dic)
+    drgb = sess.run(decoded_audio)
     drgb = drgb[::20]
-    rgbs.append(utils.Dequantize(drgb))
+    drgb = utils.Dequantize(drgb)
+    rgbs.append(drgb)
     if len(rgbs) % 10000 == 0:
         print 'doing...'
     if len(rgbs) > 80000:
         rgb_stack = np.concatenate(rgbs,axis=0)
         pkl.dump(rgb_stack,open(cluster_dir,'w'))
         break
-  pudb.set_trace()

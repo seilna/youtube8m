@@ -20,10 +20,10 @@ ap.add_argument("-o", "--output", required = True,
 args = vars(ap.parse_args())
 '''
 #args
-path = "/data1/yj/yt8m_cluster/feature.pkl"
-k = 1024
+path = "/data1/yj/yt8m_cluster/audio_feature.pkl"
+k = 256
 #output
-output="/data1/yj/yt8m_cluster/cluster.pkl"
+output="/data1/yj/yt8m_cluster/audio_cluster.pkl"
 
 
 #computing the visual dictionary
@@ -41,19 +41,19 @@ def input_fn():
 est = tf.contrib.learn.KMeansClustering(
     num_clusters = k,
     relative_tolerance=0.0001,
-    model_dir='/data1/yj/kmeans/')
+    model_dir='/data1/yj/audio_kmeans/')
 
 
 part_len = len(descriptors)/10 -1
 #descriptors = descriptors[:part_len]
 
-for n in range(3):
+for n in range(10):
     for e in range(10):
         training = descriptors[e*part_len:(e+1)*part_len]
         for i in range(10):
             print 'epoch ' + str(e)
             print str(i) + 'iteration'
-            _ = est.partial_fit(input_fn=lambda: (constant_op.constant(training), None))
+            _ = est.fit(input_fn=lambda: (constant_op.constant(training), None))
 
 
 

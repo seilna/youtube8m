@@ -294,6 +294,7 @@ class ContextMemoryModel(models.BaseModel):
 
     context_memory = tf.nn.l2_normalize(tf.reduce_sum(outputs, axis=1), dim=1)
     average_state = tf.nn.l2_normalize(tf.reduce_sum(model_input, axis=1), dim=1)
+    state = tf.concat([state[0], state[1]], 1)
     
     final_state = tf.concat([context_memory, state, average_state], 1)
 

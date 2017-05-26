@@ -51,7 +51,7 @@ flags.DEFINE_string("video_level_classifier_model", "MoeModel",
 flags.DEFINE_integer("lstm_cells", 1152, "Number of LSTM cells.")
 flags.DEFINE_integer("lstm_layers", 2, "Number of LSTM layers.")
 flags.DEFINE_integer("topk", 5, "Ordinal TopK numbers.")
-flags.DEFINE_integer("feature_dim", 1152, "rgb:1024, audio:128, rgb+audio:1156")
+flags.DEFINE_integer("feature_dim", 1152, "rgb:1024, audio:128, rgb+audio:1152")
 
 flags.DEFINE_integer("temporal_encoding", False, "whether use temporal encoding scheme or not.")
 flags.DEFINE_integer("kernel_height", 5, "CNN kernel height")
@@ -568,3 +568,43 @@ class SoftClusteringModel(models.BaseModel):
       model_input=state,
       vocab_size=vocab_size,
       **unused_params)
+
+class RnnFvModel(models.BaseModel):
+    
+  def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    """Creates a model which uses a LSTM to predict the next element of the sequence.
+    """
+    lstm_size = FLAGS.lstm_cells
+
+    feature_size = model_input.get_shape().as_list()[2]
+    sequence_length = model_input.get_shape().as_list()[1] - 1 
+
+    input_sequence = model_input[:, :-1, :]
+    output_sequence = model_input[:, 1:, :]
+
+    # fc-relu
+    input_sequence = tf.reshape(input_sequence, [-1, feature_size])
+    fc1 = tf.contrib.layers.fully_connected(input_sequence, lstm_size, activation_fn=tf.nn.relu)
+    input_sequence = tf.reshape(fc1, [-1, sequence_length, lstm_size])
+
+    cell = tf.contrib.rnn.BasicLSTMCell(lstm_size)
+    outputs, state = tf.nn.dynamic_rnn(
+      cell=cell, 
+      inputs=input_sequence, 
+      sequence_length=None,
+      parallel_iterations=128,
+      dtype=tf.float32) # output = (batch, num_frames - 1, lstm_size)
+
+    # fc-linear
+    outputs = tf.reshape(outputs, [-1, lstm_size])
+    fc2 = tf.contrib.layers.fully_connected(outputs, feature_size, activation_fn=None)
+    outputs = tf.reshape(fc2, [-1, sequence_length, feature_size])
+
+    loss = tf.nn.l2_loss(outputs - output_sequence)
+
+    dummy_pooled = tf.reduce_sum(model_input,axis=[1])
+    dummy_output = slim.fully_connected(
+        dummy_pooled, vocab_size, activation_fn=tf.nn.sigmoid,
+        weights_regularizer=slim.l2_regularizer(1e-8))
+
+    return {"predictions": dummy_output, "loss": loss}

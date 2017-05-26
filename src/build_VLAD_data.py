@@ -44,7 +44,7 @@ def _int64_feature(value):
 
 def _float_feature(value):
     """Wrapper for inserting an int64 Feature into a SequenceExample proto."""
-    return tf.train.Feature(Float_list=tf.train.FloatList(value=[value]))
+    return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
 def _bytes_feature(value):
     """Wrapper for inserting a byte Feature into a SequenceExample proto."""
@@ -61,6 +61,11 @@ def _bytes_feature_list(values):
     return tf.train.FeatureList(feature=[_bytes_feature(v) for v in values])
 
 
+def _float_feature_list(values):
+    """Wrapper for inserting an byte FeatureList into a SequenceExample proto."""
+    return tf.train.FeatureList(feature=[_float_feature(v) for v in values])
+
+
 def _to_sequence_example(cont,vlad):
     """Builds a SequenceExample proto for an video-caption pair etc..
 
@@ -73,8 +78,8 @@ def _to_sequence_example(cont,vlad):
     pudb.set_trace()
     context = tf.train.Features(feature={
         "video_id": _bytes_feature(cont['video_id']),
-    #    "labels": _int64_feature(cont['labels']),
-        "VLAD": _bytes_feature(vlad)
+        "labels": _int64_feature_list(cont['labels'].values),
+        "VLAD": _float_feature(vlad)
     })
     sequence_example = tf.train.Example(features=context)
 

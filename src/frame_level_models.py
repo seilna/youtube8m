@@ -283,18 +283,24 @@ class ContextMemoryModel(models.BaseModel):
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
     lstm_size = FLAGS.lstm_cells
-    number_of_layers = FLAGS.lstm_layers
+    number_of_layers = 1
 
-    cell = tf.contrib.rnn.LayerNormBasicLSTMCell(
-      num_units=lstm_size)
+    stacked_lstm = tf.contrib.rnn.MultiRNNCell(
+            [
+                tf.contrib.rnn.BasicLSTMCell(
+                    lstm_size, forget_bias=1.0, state_is_tuple=False)
+                for _ in range(number_of_layers)
+                ], state_is_tuple=False)
 
-    outputs, state = tf.nn.dynamic_rnn(cell, model_input,
+    loss = 0.0
+
+    outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
                                        sequence_length=num_frames,
                                        dtype=tf.float32)
 
     context_memory = tf.nn.l2_normalize(tf.reduce_sum(outputs, axis=1), dim=1)
     average_state = tf.nn.l2_normalize(tf.reduce_sum(model_input, axis=1), dim=1)
-    state = tf.concat([state[0], state[1]], 1)
+    #state = tf.concat([state[0], state[1]], 1)
     
     final_state = tf.concat([context_memory, state, average_state], 1)
 

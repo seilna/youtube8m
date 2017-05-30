@@ -579,19 +579,24 @@ class RnnFvModel(models.BaseModel):
     
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
     """Creates a model which uses a LSTM to predict the next element of the sequence.
+    using derived gradient from the RNN as a vector representation,
+    instead of using a hidden or an output layer of the RNN
+    model_input: A 'batch_size' x 'sequence_length' x 'feature_size' matrix 
     """
     lstm_size = FLAGS.lstm_cells
 
     feature_size = model_input.get_shape().as_list()[2]
-    sequence_length = model_input.get_shape().as_list()[1] - 1 
+    sequence_length = model_input.get_shape().as_list()[1]
 
-    input_sequence = model_input[:, :-1, :]
-    output_sequence = model_input[:, 1:, :]
+    # start_token is important!
+    start_token = tf.zeros_like(tf.expand_dims(model_input[:, 0, :], axis=1), dtype=tf.float32)
+    input_sequence = tf.concat( [start_token, model_input[:, :-1, :]], axis=1)
+    output_sequence = model_input[:, :, :]
 
     # fc-relu
-    input_sequence = tf.reshape(input_sequence, [-1, feature_size])
-    fc1 = tf.contrib.layers.fully_connected(input_sequence, lstm_size, activation_fn=tf.nn.relu)
-    input_sequence = tf.reshape(fc1, [-1, sequence_length, lstm_size])
+    # input_sequence = tf.reshape(input_sequence, [-1, feature_size])
+    # fc1 = tf.contrib.layers.fully_connected(input_sequence, lstm_size, activation_fn=tf.nn.relu)
+    # input_sequence = tf.reshape(fc1, [-1, sequence_length, lstm_size])
 
     cell = tf.contrib.rnn.BasicLSTMCell(lstm_size)
     outputs, state = tf.nn.dynamic_rnn(
@@ -599,7 +604,7 @@ class RnnFvModel(models.BaseModel):
       inputs=input_sequence, 
       sequence_length=None,
       parallel_iterations=128,
-      dtype=tf.float32) # output = (batch, num_frames - 1, lstm_size)
+      dtype=tf.float32) # output = (batch, num_frames, lstm_size)
 
     # fc-linear
     outputs = tf.reshape(outputs, [-1, lstm_size])

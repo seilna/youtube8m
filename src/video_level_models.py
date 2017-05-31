@@ -25,6 +25,7 @@ import tensorflow.contrib.slim as slim
 import tensorflow.contrib.layers as layers
 
 FLAGS = flags.FLAGS
+flags.DEFINE_integer("hidden_size", 1152, "NN hidden size")
 flags.DEFINE_float("sharpening", 1.0, "Corelation matrix sharpening parameters")
 flags.DEFINE_float("corelation_gamma", 0.1, "corelation matrix strength")
 flags.DEFINE_integer(
@@ -91,6 +92,43 @@ class Logistic_Multi_Layer_Model(models.BaseModel):
         fc2, vocab_size, activation_fn=tf.nn.sigmoid,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
     return {"predictions": output, "features":fc2}    
+
+class NN(models.BaseModel):
+
+  """A softmax over a mixture of logistic models (with L2 regularization)."""
+
+  def create_model(self,
+                   model_input,
+                   vocab_size,
+                   num_mixtures=None,
+                   l2_penalty=1e-8,
+                   **unused_params):
+    hidden_size = FLAGS.hidden_size
+    h1 = model_input
+    num_layer = 3
+
+    for _ in range(num_layer):
+			h1 = slim.fully_connected(
+					h1,
+					hidden_size,
+					activation_fn=None,
+					biases_initializer=None,
+					weights_regularizer=slim.l2_regularizer(l2_penalty))
+      
+			h1 = tf.contrib.layers.layer_norm(inputs=h1, center=True, scale=True, activation_fn=tf.nn.relu)
+
+    predictions = tf.nn.sigmoid(
+				slim.fully_connected(
+					h1,
+					vocab_size,
+					activation_fn=None,
+					biases_initializer=None,
+					weights_regularizer=slim.l2_regularizer(l2_penalty),
+					scope="predictions_layer")
+				)
+
+    return {"predictions": predictions}
+
 
 class MoeModel(models.BaseModel):
 
@@ -230,6 +268,8 @@ class MoeWithLabelCorelationModel(models.BaseModel):
 
     sharpening = FLAGS.sharpening
     label_corelation_data = load("./data/corelated_matrix.hkl")
+    for i in range(4716):
+      label_corelation_data[i, i] = np.average(label_corelation_data, axis=1)[i]
     label_corelation_data = (label_corelation_data - np.average(label_corelation_data, axis=1))/np.sum(label_corelation_data, axis=1)
 
     label_corelation_matrix = tf.cast(tf.Variable(label_corelation_data, trainable=True), tf.float32)

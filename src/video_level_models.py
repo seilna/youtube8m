@@ -25,7 +25,7 @@ import tensorflow.contrib.slim as slim
 import tensorflow.contrib.layers as layers
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer("hidden_size", 1152, "NN hidden size")
+flags.DEFINE_integer("hidden_size", 4096, "NN hidden size")
 flags.DEFINE_float("sharpening", 1.0, "Corelation matrix sharpening parameters")
 flags.DEFINE_float("corelation_gamma", 0.1, "corelation matrix strength")
 flags.DEFINE_integer(
@@ -63,7 +63,7 @@ class Logistic_Multi_Layer_Model(models.BaseModel):
   """Logistic model with L2 regularization."""
 
   def create_model(self, model_input, vocab_size, l2_penalty=1e-8, **unused_params):
-    """Creates a logistic model.
+    """Creates a Multi-layer bottleneck logistic model.
 
     Args:
       model_input: 'batch' x 'num_features' matrix of input features.
@@ -74,19 +74,21 @@ class Logistic_Multi_Layer_Model(models.BaseModel):
       model in the 'predictions' key. The dimensions of the tensor are
       batch_size x num_classes."""
 
+    hidden_size = FLAGS.hidden_size
     bottleneck_size = FLAGS.bottleneck_size
-
-    print("Logistic_Multi_Layer_Model")
+    print(hidden_size, bottleneck_size)
 
     fc1 = slim.fully_connected(
-        model_input, vocab_size * 2, activation_fn=tf.nn.relu,
+        model_input, hidden_size, activation_fn=None, biases_initializer=None,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
-    #fc1 = slim.dropout(fc1, 0.5, scope='dropout1')
+    fc1 = tf.contrib.layers.layer_norm(inputs=fc1, center=True, scale=True, activation_fn=tf.nn.relu)
+    
 
     fc2 = slim.fully_connected(
-        fc1, bottleneck_size, activation_fn=tf.nn.relu,
+        fc1, bottleneck_size, activation_fn=None, biases_initializer=None,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
-    #fc2 = slim.dropout(fc2, 0.5, scope='dropout2')   
+    fc2 = tf.contrib.layers.layer_norm(inputs=fc2, center=True, scale=True, activation_fn=tf.nn.relu)
+    
       
     output = slim.fully_connected(
         fc2, vocab_size, activation_fn=tf.nn.sigmoid,

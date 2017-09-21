@@ -4,4 +4,6 @@
 
 Our team SNUVL X SKT ranked 8th place out of 650 teams.
 
+[Competition Review Slides(KR)](https://seilna.github.io/youtube8m-review/)
+
 
